@@ -2,17 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from numpy.fft import fft
-from eafft import fft64s, fft4, fft16, bitRevers
-from myfft import crfft
+from eafft import fft64s, fft4, fft16, bit_revers
 
-# test bitrevers
-print(bitRevers(np.array([x for x in range(0, 16)])))
+# test bit_revers
+# print(bit_revers(np.array([x for x in range(0, 16)])))
 
 # test fft
-# x = np.array([x for x in range(0, 16)])
-# y = fft16(x)
-# y1 = fft(x)
-# print(max(y-y1))
+x = np.array([x for x in range(16)], dtype=complex)
+y = fft16(x)
+x = np.array([x for x in range(16)], dtype=complex)
+y1 = fft(x)
+print(y)
+print(y1)
+print(max(abs(y-y1)))
 
 
 # x = np.array([x for x in range(0, 64)], dtype=complex)
