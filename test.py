@@ -2,18 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from numpy.fft import fft
-from eafft import fft64s, fft4, fft16, bit_revers
+from eafft import fft64s, fft4, fft16, fft64, bit_revers
 
 # test bit_revers
 # print(bit_revers(np.array([x for x in range(0, 16)])))
 
 # test fft
-x = np.array([x for x in range(16)], dtype=complex)
-y = fft16(x)
-x = np.array([x for x in range(16)], dtype=complex)
+x = np.array([x for x in range(64)], dtype=complex)
 y1 = fft(x)
-print(y)
+y = fft64(x)
+
 print(y1)
+print(y)
 print(max(abs(y-y1)))
 
 

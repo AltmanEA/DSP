@@ -21,7 +21,7 @@ def fft16(x):
         x[i:16:4] = fft4(x[i:16:4])
 
     w = array(exp(-2j * pi * matrix(
-        [[i * j for i in range(0, 4)] for j in range(0, 4)]) / 16))
+        [[i * j for i in range(4)] for j in range(4)]) / 16))
     x = x * w.flatten()
 
     for i in range(4):
@@ -31,9 +31,32 @@ def fft16(x):
 
 
 def fft64(x):
+
+    for k in range(4):
+        z = array(x[k:64:4])
+
+        for i in range(4):
+            z[i:16:4] = fft4(z[i:16:4])
+
+        w = array(exp(-2j * pi * matrix(
+            [[i * j for i in range(4)] for j in range(4)]) / 16))
+        z = z * w.flatten()
+
+        y = zeros(16, dtype=complex)
+        for i in range(4):
+            y[i:16:4] = fft4(z[i * 4:i * 4 + 4])
+
+        x[k:64:4] = y
+
+    w = array(exp(-2j * pi * matrix(
+            [[i * j for i in range(4)] for j in range(16)]) / 64))
+    x = x * w.flatten()
+
     y = zeros(64, dtype=complex)
+    for i in range(16):
+        y[i:64:16] = fft4(x[i*4:i*4+4])
 
-
+    return y
 
 
 # scaled (s) fft for 64 point
