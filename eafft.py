@@ -61,26 +61,31 @@ def fft64(x):
 
 # scaled (s) fft for 64 point
 def fft64s(x, s):
-    # stage 1, 16 fft4
-    for i in range(0, 16):
-        x[i * 4:i * 4 + 4] = fft4(x[i * 4:i * 4 + 4])
+    for k in range(4):
+        z = array(x[k:64:4])
 
-    # stage 2, 4 fft16
+        for i in range(4):
+            z[i:16:4] = fft4(z[i:16:4])
+
+        w = array(exp(-2j * pi * matrix(
+            [[i * j for i in range(4)] for j in range(4)]) / 16))
+        z = z * w.flatten()
+
+        y = zeros(16, dtype=complex)
+        for i in range(4):
+            y[i:16:4] = fft4(z[i * 4:i * 4 + 4])
+
+        x[k:64:4] = y
+
     w = array(exp(-2j * pi * matrix(
-        [[i * j for i in range(0, 4)] for j in range(0, 4)]) / 16)).flatten()
-    for i in range(0, 4):
-        x[i * 16:(i + 1) * 16] = x[i * 16:(i + 1) * 16] * w
-        for j in range(0, 4):
-            x[i * 16 + j:(i + 1) * 16:4] = fft4(x[i * 16 + j:(i + 1) * 16:4])
+        [[i * j for i in range(4)] for j in range(16)]) / 64))
+    x = x * w.flatten()
 
-    # stage 3, 1 fft64
-    w = array(exp(-2j * pi * matrix(
-        [[i * j for i in range(0, 16)] for j in range(0, 4)]) / 64).reshape((1, 64)))
-    x = (x * w).reshape(64)
-    for i in range(0, 16):
-        x[i:64:16] = fft4(x[i:64:16])
+    y = zeros(64, dtype=complex)
+    for i in range(16):
+        y[i:64:16] = fft4(x[i * 4:i * 4 + 4])
 
-    return x
+    return y
 
 
 def bit_revers(x):

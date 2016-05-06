@@ -2,7 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from numpy.fft import fft
-from eafft import fft64s, fft4, fft16, fft64, bit_revers
+from classic_fft import fft4, fft16, fft64, s_gen, crfft
+
+
 
 # test bit_revers
 # print(bit_revers(np.array([x for x in range(0, 16)])))
@@ -10,7 +12,7 @@ from eafft import fft64s, fft4, fft16, fft64, bit_revers
 # test fft
 x = np.array([x for x in range(64)], dtype=complex)
 y1 = fft(x)
-y = fft64(x)
+y = crfft(x)
 
 print(y1)
 print(y)
