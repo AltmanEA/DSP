@@ -1,4 +1,4 @@
-from numpy import array, zeros, matrix, pi, exp, log2, dtype, cos, sin, fmax, sqrt
+from numpy import array, zeros, matrix, pi, exp, log2, cos, sin, fmax, sqrt
 
 
 #
@@ -22,42 +22,29 @@ def fft16(x):
     y = zeros(16, dtype=complex)
     for i in range(4):
         x[i:16:4] = fft4(x[i:16:4])
-
-    w = array(exp(-2j * pi * matrix(
-        [[i * j for i in range(4)] for j in range(4)]) / 16))
+    w = array([[exp(-2j*pi*i*j/16) for i in range(4)] for j in range(4)])
     x = x * w.flatten()
-
     for i in range(4):
         y[i:16:4] = fft4(x[i * 4:i * 4 + 4])
-
     return y
 
 
 def fft64(x):
     for k in range(4):
         z = array(x[k:64:4])
-
         for i in range(4):
             z[i:16:4] = fft4(z[i:16:4])
-
-        w = array(exp(-2j * pi * matrix(
-            [[i * j for i in range(4)] for j in range(4)]) / 16))
+        w = array([[exp(-2j*pi*i*j/16) for i in range(4)] for j in range(4)])
         z = z * w.flatten()
-
         y = zeros(16, dtype=complex)
         for i in range(4):
             y[i:16:4] = fft4(z[i * 4:i * 4 + 4])
-
         x[k:64:4] = y
-
-    w = array(exp(-2j * pi * matrix(
-        [[i * j for i in range(4)] for j in range(16)]) / 64))
+    w = array([[exp(-2j*pi*i*j/64) for i in range(4)] for j in range(16)])
     x = x * w.flatten()
-
     y = zeros(64, dtype=complex)
     for i in range(16):
         y[i:64:16] = fft4(x[i * 4:i * 4 + 4])
-
     return y
 
 
@@ -90,25 +77,28 @@ def shift_right(x):
     return y
 
 
+def split_radix_butt(u, z, z1, n):
+    y = zeros(n, dtype=complex)
+    for i in range(int(n/4)):
+        y[i]       = (u[i] + (z[i] + z1[i]))
+        y[i+n/2]   = (u[i] - (z[i] + z1[i]))
+        y[i+n/4]   = (u[i+n/4] - 1j*(z[i] - z1[i]))
+        y[i+3*n/4] = (u[i+n/4] + 1j*(z[i] - z1[i]))
+    return y
+
+
 def crfft(x):
     n = x.size
     if n == 1:
         return x
     if n == 2:
         return array([x[0] + x[1], x[0] - x[1]])
-    tmp = array(range(int(n/4)))
-    w1 = exp(-1j*2*pi*tmp/n)
-    w2 = exp(1j*2*pi*tmp/n)
+    w1 = array([exp(-1j*2*pi*i/n) for i in range(int(n/4))])
+    w2 = array([exp(1j*2*pi*i/n) for i in range(int(n/4))])
     u = crfft(x[0:n:2])
     z = crfft(x[1:n:4]) * w1
     z1 = crfft(shift_right(x[3:n:4])) * w2
-    y = zeros(n, dtype=complex)
-    for i in range(int(n/4)):
-        y[i]       = u[i] + (z[i] + z1[i])
-        y[i+n/2]   = u[i] - (z[i] + z1[i])
-        y[i+n/4]   = u[i+n/4] - 1j*(z[i] - z1[i])
-        y[i+3*n/4] = u[i+n/4] + 1j*(z[i] - z1[i])
-    return y
+    return split_radix_butt(u, z, z1, n)
 
 
 #
@@ -117,7 +107,7 @@ def crfft(x):
 
 def s_gen(n):
     if n < 5:
-        return zeros(n).fill(1)
+        return zeros(n) + 1
     result = zeros(n, dtype=float)
     q = int(n / 4)
     tmp = array(range(q))
@@ -125,22 +115,6 @@ def s_gen(n):
     result[q:2 * q] = result[0:q]
     result[2 * q:4 * q] = result[0:2 * q]
     return result
-
-
-def split_radix_butt(u, z, z1, n,
-                     s1=array([]), s2=array([]), s3=array([]), s4=array([])):
-    y = zeros(n, dtype=complex)
-    if s1.size == 0:
-        s1 = zeros(int(n/4)).fill(1)
-        s2 = zeros(int(n/4)).fill(1)
-        s3 = zeros(int(n/4)).fill(1)
-        s4 = zeros(int(n/4)).fill(1)
-    for i in range(int(n/4)):
-        y[i]       = u[i] + (z[i] + z1[i])*s1[i]
-        y[i+n/2]   = u[i] - (z[i] + z1[i])*s2[i]
-        y[i+n/4]   = u[i+n/4] - 1j*(z[i] - z1[i])*s3[i]
-        y[i+3*n/4] = u[i+n/4] + 1j*(z[i] - z1[i])*s4[i]
-    return y
 
 
 def get_sizes(x):
@@ -152,19 +126,19 @@ def get_sizes(x):
 
 
 def get_w(n, scale):
-    tmp = array(range(n))
+    tmp = array(range(int(n/4)))
     w1 = exp(-1j*2*pi*tmp/n)*scale
     w2 = exp(1j*2*pi*tmp/n)*scale
     return w1, w2
 
 
-def get_s(n):
+def get_scales(n):
     s = s_gen(n)
-    s1 = s_gen(int(n/4))
+    s1_4 = s_gen(int(n/4))
     s2 = s_gen(2 * n)
     s4 = s_gen(4 * n)
-    t = s1 / s[0:int(n/4)]
-    return t, s, s1, s2, s4
+    t = s1_4 / s[0:int(n/4)]
+    return t, s, s1_4, s2, s4
 
 
 def ncpsrffts4(x):
@@ -173,14 +147,20 @@ def ncpsrffts4(x):
         return x
     if n == 2:
         return array([x[0] + x[1], (x[0] - x[1])*sqrt(2)])
-    t, s, s1, s2, s4 = get_s(n)
-    w1, w2 = get_w(n1, t)
+    t, s, s1_4, s2, s4 = get_scales(n)
+    w1, w2 = get_w(n, t)
 
     u = ncpsrffts2(x[0:n:2])
     z = ncpsrffts(x[1:n:4]) * w1
     z1 = ncpsrffts(shift_right(x[3:n:4])) * w2
-    return split_radix_butt(u, z, z1, n,
-                            s/s4[0:n1], s/s4[n2:n3], s/s4[n1:n2], s/s4[n3:n])
+
+    y = zeros(n, dtype=complex)
+    for i in range(int(n/4)):
+        y[i]       = (u[i] + (z[i] + z1[i]))*s[i]/s4[i]
+        y[i+n/2]   = (u[i] - (z[i] + z1[i]))*s[i]/s4[i+n/2]
+        y[i+n/4]   = (u[i+n/4] - 1j*(z[i] - z1[i]))*s[i]/s4[i+n/4]
+        y[i+3*n/4] = (u[i+n/4] + 1j*(z[i] - z1[i]))*s[i]/s4[i+3*n/4]
+    return y
 
 
 def ncpsrffts2(x):
@@ -189,13 +169,20 @@ def ncpsrffts2(x):
         return x
     if n == 2:
         return array([x[0] + x[1], x[0] - x[1]])
-    t, s, s1, s2, s4 = get_s(n)
-    w1, w2 = get_w(n1, t)
+    t, s, s1_4, s2, s4 = get_scales(n)
+    w1, w2 = get_w(n, t)
     u = ncpsrffts4(x[0:n:2])
     z = ncpsrffts(x[1:n:4]) * w1
     z1 = ncpsrffts(shift_right(x[3:n:4])) * w2
-    return split_radix_butt(u, z, z1, n,
-                            s/s2[0:n1], s/s2[0:n1], s/s2[n1:n2], s/s2[n1:n2])
+
+    y = zeros(n, dtype=complex)
+    for i in range(int(n/4)):
+        y[i]       = u[i] + (z[i] + z1[i])*s[i]/s2[i]
+        y[i+n/2]   = u[i] - (z[i] + z1[i])*s[i]/s2[i]
+        y[i+n/4]   = u[i+n/4] - 1j*(z[i] - z1[i])*s[i]/s2[i+n/4]
+        y[i+3*n/4] = u[i+n/4] + 1j*(z[i] - z1[i])*s[i]/s2[i+n/4]
+    return y
+
 
 def ncpsrffts(x):
     n, n1, n2, n3 = get_sizes(x)
@@ -203,8 +190,8 @@ def ncpsrffts(x):
         return x
     if n == 2:
         return array([x[0] + x[1], x[0] - x[1]])
-    t, s, s1, s2, s4 = get_s(n)
-    w1, w2 = get_w(n1, t)
+    t, s, s1_4, s2, s4 = get_scales(n)
+    w1, w2 = get_w(n, t)
     u = ncpsrffts2(x[0:n:2])
     z = ncpsrffts(x[1:n:4]) * w1
     z1 = ncpsrffts(shift_right(x[3:n:4])) * w2
@@ -215,8 +202,8 @@ def ncpsrfft(x):
     n, n1, n2, n3 = get_sizes(x)
     if n < 64:
         return crfft(x)
-    t, s, s1, s2, s4 = get_s(n)
-    w1, w2 = get_w(n1, s)
+    t, s, s1_4, s2, s4 = get_scales(n)
+    w1, w2 = get_w(n, s1_4)
     u = ncpsrfft(x[0:n:2])
     z = ncpsrffts(x[1:n:4]) * w1
     z1 = ncpsrffts(shift_right(x[3:n:4])) * w2
