@@ -1,5 +1,18 @@
-from numpy import array, zeros, matrix, pi, exp, log2, cos, sin, fmax, sqrt
+from numpy import array, zeros, matrix, pi, exp, log2, cos, sin, fmax, sqrt, hstack
 
+
+#
+# recursive function
+#
+
+def fftr2(x):
+    n = x.size
+    if n == 1:
+        return x
+    w = array([exp(-1j*2*pi*i/n) for i in range(n//2)])
+    y0 = fftr2(x[0:n:2])
+    y1 = fftr2(x[1:n:2])*w
+    return hstack((y0 + y1, y0 - y1))
 
 #
 # radix-4
@@ -93,8 +106,8 @@ def crfft(x):
         return x
     if n == 2:
         return array([x[0] + x[1], x[0] - x[1]])
-    w1 = array([exp(-1j*2*pi*i/n) for i in range(int(n/4))])
-    w2 = array([exp(1j*2*pi*i/n) for i in range(int(n/4))])
+    w1 = array([exp(-1j*2*pi*i/n) for i in range(n//4)])
+    w2 = array([exp(1j*2*pi*i/n) for i in range(n//4)])
     u = crfft(x[0:n:2])
     z = crfft(x[1:n:4]) * w1
     z1 = crfft(shift_right(x[3:n:4])) * w2
@@ -126,7 +139,7 @@ def get_sizes(x):
 
 
 def get_w(n, scale):
-    tmp = array(range(int(n/4)))
+    tmp = array(range(n//4))
     w1 = exp(-1j*2*pi*tmp/n)*scale
     w2 = exp(1j*2*pi*tmp/n)*scale
     return w1, w2
@@ -134,10 +147,10 @@ def get_w(n, scale):
 
 def get_scales(n):
     s = s_gen(n)
-    s1_4 = s_gen(int(n/4))
+    s1_4 = s_gen(n//4)
     s2 = s_gen(2 * n)
     s4 = s_gen(4 * n)
-    t = s1_4 / s[0:int(n/4)]
+    t = s1_4 / s[0:n//4]
     return t, s, s1_4, s2, s4
 
 
@@ -155,7 +168,7 @@ def ncpsrffts4(x):
     z1 = ncpsrffts(shift_right(x[3:n:4])) * w2
 
     y = zeros(n, dtype=complex)
-    for i in range(int(n/4)):
+    for i in range(n//4):
         y[i]       = (u[i] + (z[i] + z1[i]))*s[i]/s4[i]
         y[i+n/2]   = (u[i] - (z[i] + z1[i]))*s[i]/s4[i+n/2]
         y[i+n/4]   = (u[i+n/4] - 1j*(z[i] - z1[i]))*s[i]/s4[i+n/4]
@@ -176,7 +189,7 @@ def ncpsrffts2(x):
     z1 = ncpsrffts(shift_right(x[3:n:4])) * w2
 
     y = zeros(n, dtype=complex)
-    for i in range(int(n/4)):
+    for i in range(n//4):
         y[i]       = u[i] + (z[i] + z1[i])*s[i]/s2[i]
         y[i+n/2]   = u[i] - (z[i] + z1[i])*s[i]/s2[i]
         y[i+n/4]   = u[i+n/4] - 1j*(z[i] - z1[i])*s[i]/s2[i+n/4]
