@@ -14,6 +14,7 @@ def fftr2(x):
     y1 = fftr2(x[1:n:2])*w
     return hstack((y0 + y1, y0 - y1))
 
+
 #
 # radix-4
 #

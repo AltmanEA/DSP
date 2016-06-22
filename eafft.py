@@ -1,5 +1,28 @@
 from numpy import array, zeros, matrix, pi, exp, cos
-from classic_fft import fft4, crfft, shift_right, split_radix_butt, ncpsrfft
+from classic_fft import fft4, crfft, shift_right, split_radix_butt, ncpsrfft, fft16
+
+
+def fft32(x):
+    y = zeros(32, dtype=complex)
+    y1 = zeros(16, dtype=complex)
+    y2 = zeros(16, dtype=complex)
+    y3 = zeros(16, dtype=complex)
+    y4 = zeros(16, dtype=complex)
+    w = array([exp(-1j*2*pi*i/32) for i in range(16)])
+    y1 = x[0:16] + x[16:32]
+    y2 = (x[0:16] - x[16:32])*w[0:16]
+    y[0:32:2] = fft16(y1)
+    # y[1:32:2] = fft16(y2)
+
+    for i in range(4):
+        y3[i:16:4] = fft4(y2[i:16:4])
+    w1 = array([[exp(-2j*pi*i*j/16) for i in range(4)] for j in range(4)])
+    y3 = y3 * w1.flatten()
+    for i in range(4):
+        y4[i:16:4] = fft4(y3[i * 4:i * 4 + 4])
+
+    y[1:32:2] = y4
+    return y
 
 
 # scaled (s) fft for 64 point
