@@ -1,18 +1,74 @@
-import numpy as np
-
-from numpy.fft import fft
-from classic_fft import fft4, fft16, fft64, s_gen, crfft, ncpsrfft, fftr2
-
-# test fft
-from eafft import fft64s, fft256, fft32
-
-x = np.array([x for x in range(256)], dtype=complex)
-y1 = fft(x)
-y = fft256(x)
-
-print(y1)
-print(y)
-print(max(abs(y-y1)))
+# check some things
+from numpy import array, exp, pi, zeros
+from numpy.fft import fft, ifft
 
 
+def fft16(x):
+    for i in range(4):
+        x[i:16:4] = fft(x[i:16:4])
 
+    w = array([[exp(-2j*pi*i*j/16) for i in range(4)] for j in range(4)])
+    x = x * w.flatten()
+
+    for i in range(4):
+        x[i*4:(i+1)*4] = fft(x[i*4:(i+1)*4])
+
+    x = x.reshape((4, 4)).transpose().flatten()
+    return x
+
+
+def fft16_back(x):
+    x = x.reshape((4, 4)).transpose().flatten()
+    for i in range(4):
+        x[i*4:(i+1)*4] = ifft(x[i*4:(i+1)*4])*4
+
+    w = array([[exp(2j*pi*i*j/16) for i in range(4)] for j in range(4)])
+    x = x * w.flatten()
+
+    for i in range(4):
+        x[i:16:4] = ifft(x[i:16:4])*4
+
+    return x
+
+
+def fft128(x):
+    for i in range(32):
+        x[i:128:32] = fft(x[i:128:32])
+
+    w = array([[exp(-2j*pi*i*j/128) for i in range(32)] for j in range(4)])
+    x = x*w.flatten()
+
+    for i in range(4):
+        x[i*32:(i+1)*32] = fft(x[i*32:(i+1)*32])
+
+    x = x.reshape((4, 32)).transpose().flatten()
+    return x
+
+
+def fft128_back(x):
+    x = x.reshape((4, 32)).transpose().flatten()
+
+    for i in range(4):
+        x[i*32:(i+1)*32] = ifft(x[i*32:(i+1)*32])*32
+
+    w = array([[exp(-2j*pi*i*j/128) for i in range(32)] for j in range(4)])
+    x = x*w.flatten()
+
+    for i in range(32):
+        x[i:128:32] = ifft(x[i:128:32])*4
+
+    return x
+
+
+# test function
+def test_func(func, size, full_list=False):
+    x = array([x for x in range(size)], dtype=complex)
+    python_fft = fft(x)
+    y = func(x)
+    if full_list:
+        print(python_fft)
+        print(y)
+    print(max(abs(y-python_fft)))
+
+# test
+test_func(fft16_back, 16, True)
