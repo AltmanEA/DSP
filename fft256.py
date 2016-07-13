@@ -52,6 +52,7 @@ def fft256_a1(x):
 
 #
 #       Algorithm 2
+#       in progress
 #
 
 def fft16_m1(xl):
