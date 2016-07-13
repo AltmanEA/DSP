@@ -47,59 +47,46 @@ def fft256(x):
     return split_radix_butt(u, z, z1, n)
 
 
-# scaled (s) fft for 128 point
-def fft1281s(x, s):
-    for i in range(32):
-        x[i:128:32] = fft(x[i:128:32])
+# fft 256 radix 16
+def fft256_r16(x):
+    for i in range(16):
+        x[i:256:16] = fft(x[i:256:16])
 
-    cor = [exp(-2j*pi*i/32) * exp(-2j*pi*i/32).real for i in range(8)]
-    cor[0] = 1
-    cor[4] = 1
+    w = array([[exp(-2j*pi*i*j/256) for i in range(16)] for j in range(16)])
+    x = x * w.flatten()
 
-    w = array([[exp(-2j*pi*i*j/128)*cor[i%8]/s[i] for i in range(32)] for j in range(4)])
-    x = x*w.flatten()
+    for i in range(16):
+        x[i*16:(i+1)*16] = fft(x[i*16:(i+1)*16])
 
-    w = array([[exp(-2j*pi*i*j/32)/cor[i] for i in range(8)] for j in range(4)])
-
-    for i in range(4):
-        tmp = x[i*16:(i+1)*16]
-
-        for j in range(8):
-            tmp[j:16:8] = fft(tmp[j:16:8])
-        tmp = tmp*w.flatten()
-        for j in range(4):
-            tmp[j*8:(j+1)*8] = fft(tmp[j*8:(j+1)*8])
-
-        tmp = tmp.reshape((4, 8)).transpose().flatten()
-        x[i*16:(i+1)*16] = tmp
-
-    x = x.reshape((4, 32)).transpose().flatten()
+    x = x.reshape((16, 16)).transpose().flatten()
     return x
 
 
 # scaled (s) fft for 128 point
 def fft128s(x, s):
-    for i in range(32):
-        x[i:128:32] = fft(x[i:128:32])
+    cor = [exp(-2j*pi*i/32) * exp(-2j*pi*i/32).real for i in range(8)]
+    cor[0] = 1
+    cor[4] = 1
 
-    w = array([[exp(-2j*pi*i*j/128) for i in range(32)] for j in range(4)])
+    w = array([[exp(-2j*pi*i*j/32)/cor[j] for i in range(4)] for j in range(8)])
+    for i in range(4):
+        tmp = x[i:128:4]
+
+        for j in range(4):
+            tmp[j:32:4] = fft(tmp[j:32:4])
+        tmp = tmp*w.flatten()
+        for j in range(8):
+            tmp[j*4:(j+1)*4] = fft(tmp[j*4:(j+1)*4])
+
+        x[i:128:4] = tmp.reshape((8, 4)).transpose().flatten()
+
+    w = array([[exp(-2j*pi*i*j/128)*cor[j%8]/s[j] for i in range(4)] for j in range(32)])
     x = x*w.flatten()
 
-    w = array([[exp(-2j*pi*i*j/32) for i in range(8)] for j in range(4)])
+    for i in range(32):
+        x[i*4:(i+1)*4] = fft(x[i*4:(i+1)*4])
 
-    for i in range(4):
-        tmp = x[i*16:(i+1)*16]
-
-        for j in range(8):
-            tmp[j:16:8] = fft(tmp[j:16:8])
-        tmp = tmp*w.flatten()
-        for j in range(4):
-            tmp[j*8:(j+1)*8] = fft(tmp[j*8:(j+1)*8])
-
-        tmp = tmp.reshape((4, 8)).transpose().flatten()
-        x[i*16:(i+1)*16] = tmp
-
-    x = x.reshape((4, 32)).transpose().flatten()
+    x = x.reshape((32, 4)).transpose().flatten()
     return x
 
 
@@ -108,14 +95,16 @@ def fft512(x):
     n = 512
     s1 = array([exp(1j*2*pi*i/n) for i in range(32)])/cos(pi/8)
     s2 = array([exp(-1j*2*pi*i/n) for i in range(32)])/cos(pi/8)
-    s1[0:32:8] = 1
-    s2[0:32:8] = 1
+    s1[0:32:32] = 1
+    s2[0:32:32] = 1
     w1 = array([exp(-1j*2*pi*i/n)*s1[i%32] for i in range(128)])
     w2 = array([exp(1j*2*pi*i/n)*s2[i%32] for i in range(128)])
     u = fft256(x[0:n:2])
     z = fft128s(x[1:n:4], s1) * w1
     z1 = fft128s(shift_right(x[3:n:4]), s2) * w2
     return split_radix_butt(u, z, z1, n)
+
+
 
 
 # test function
@@ -132,5 +121,6 @@ def test_func(func, size, full_list=False):
 # test
 # test_func(lambda x: fft64s(x, zeros(x.size//4)+1), 64)
 # test_func(fft256, 256)
-test_func(lambda x: fft128s(x, zeros(x.size//4)+1), 128)
+# test_func(lambda x: fft128s(x, zeros(x.size//4)+1), 128)
 # test_func(fft512, 512)
+test_func(fft256_r16, 256)
