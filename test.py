@@ -1,6 +1,7 @@
 # check some things
-from numpy import array, exp, pi, zeros
+from numpy import array, exp, pi, zeros, dot
 from numpy.fft import fft, ifft
+from numpy.linalg import linalg
 
 
 def fft16(x):
@@ -71,4 +72,9 @@ def test_func(func, size, full_list=False):
     print(max(abs(y-python_fft)))
 
 # test
-test_func(fft16_back, 16, True)
+# test_func(fft16_back, 16, True)
+
+w  = array([[exp(-2j*pi*i*j/8) for i in range(8)] for j in range(8)])
+w1 = linalg.inv(w)
+x = dot(w1, w)
+print(w)
