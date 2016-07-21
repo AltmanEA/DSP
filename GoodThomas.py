@@ -1,6 +1,7 @@
 from numpy import array, zeros
 from numpy.fft import fft
-from OldAlg.tools import extended_euclid
+
+from tools import extended_euclid
 
 
 def good_thomas(x, P, Q):
