@@ -1,7 +1,25 @@
 from numpy import array, zeros
 from numpy.fft import fft
 
-from tools import extended_euclid
+def extended_euclid(number_one, number_two):
+    a = number_one
+    b = number_two
+    x2 = 1
+    x1 = 0
+    y2 = 0
+    y1 = 1
+    while b > 0:
+        q = a // b
+        r = a - q * b
+        tmp1 = x2 - q * x1
+        tmp2 = y2 - q * y1
+        x2 = x1
+        x1 = tmp1
+        y2 = y1
+        y1 = tmp2
+        a = b
+        b = r
+    return a, x2, y2
 
 
 def good_thomas(x, P, Q):
@@ -34,8 +52,8 @@ def good_thomas(x, P, Q):
 # test
 arr_p = [3, 5, 7, 125]
 arr_q = [5, 7, 11, 8]
-for i in range(arr_p.__sizeof__()):
+for i in range(4):
     x = array([2*i+1j*i for i in range(arr_p[i]*arr_q[i])])
     pfft = fft(x)
     x = good_thomas(x, arr_p[i], arr_q[i])
-    print("error for ", arr_p[i], arr_q[i], "--", max(abs(pfft-x)))
+    print("accuracy for (", arr_p[i], arr_q[i], ") --", max(abs(pfft-x)))

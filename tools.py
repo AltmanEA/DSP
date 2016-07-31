@@ -1,26 +1,47 @@
-def extended_euclid(number_one, number_two):
-    a = number_one
-    b = number_two
-    x2 = 1
-    x1 = 0
-    y2 = 0
-    y1 = 1
-    while b > 0:
-        q = a // b
-        r = a - q * b
-        tmp1 = x2 - q * x1
-        tmp2 = y2 - q * y1
-        x2 = x1
-        x1 = tmp1
-        y2 = y1
-        y1 = tmp2
-        a = b
-        b = r
-    return a, x2, y2
+from numpy import array
+
+
+def isEquals(x, y):
+    if abs(x-y) < 1e-15:
+        return True
+    return False
+
+
+def flops4Mul(x):
+    if isEquals(x.real, 0):
+        if isEquals(abs(x.imag), 1):
+            return 0
+        else:
+            return 2
+    if isEquals(x.imag, 0):
+        if isEquals(abs(x.real), 1):
+            return 0
+        else:
+            return 2
+
+    if isEquals(abs(x.real), 1):
+        if isEquals(abs(x.imag), 1):
+            return 2
+        else:
+            return 4
+    if isEquals(abs(x.imag), 1):
+        return 4
+
+    if isEquals(abs(x.real), abs(x.imag)):
+        return 4
+    return 6
+
+
+def flops4Muls(x):
+    tmp = x.reshape(x.size)
+    s = 0
+    for n in tmp:
+        s += flops4Mul(n)
+    return s
 
 
 # test
-if extended_euclid(7, 11) != (1, -3, 2):
-    print("error in extended_euclid with 7 11")
-if extended_euclid(19, 11) != (1, -4, 7):
-    print("error in extended_euclid with 19 11")
+# x = array([1, 1-1j, -1+2j, 2+1j, 2+2j, 2-3j, 2j, -2])
+# ans = 24
+# if flops4Muls(x) != ans:
+#     print("error, ", ans, "!=", flops4Muls(x))
