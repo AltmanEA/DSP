@@ -1,4 +1,25 @@
-from numpy import array
+from numpy import exp, pi, log2, array
+
+
+def wf(i, n):
+    return exp(-2j*pi*i/n)
+
+
+def bit_reverse_index(x, n):
+    result = 0
+    for i in range(n):
+        if (x >> i) & 1:
+            result |= 1 << (n - 1 - i)
+    return result
+
+
+def bit_revers(x):
+    n = x.size
+    y = array(x)
+    bits = int(log2(n))
+    for i in range(n):
+        y[i] = x[bit_reverse_index(i, bits)]
+    return y
 
 
 def isEquals(x, y):

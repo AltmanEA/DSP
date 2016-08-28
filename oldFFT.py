@@ -1,6 +1,7 @@
 from numpy import array, zeros
 from numpy.fft import fft
 
+
 def extended_euclid(number_one, number_two):
     a = number_one
     b = number_two
@@ -48,6 +49,10 @@ def good_thomas(x, P, Q):
         x[i] = x1[r[i], k[i]]
 
     return x
+
+
+# def agarwal_cooley(x, y):
+
 
 # test
 arr_p = [3, 5, 7, 125]

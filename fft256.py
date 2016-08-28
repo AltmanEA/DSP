@@ -1,13 +1,15 @@
 from numpy import array, zeros, pi, exp, cos, hstack
 from numpy.fft import fft, ifft
 from classic_fft import split_radix_butt, ncpsrfft, shift_right
+from tools import flops4Muls, bit_revers, wf
 
 #
 #       Algorithm 1
+#   SR + fft64s with carry
 #
 
 # scaled (s) fft for 64 point
-from tools import flops4Muls
+
 
 
 def fft64s(x, s):
@@ -61,9 +63,10 @@ def fft256_a1(x):
 
 #
 #       Algorithm 2
+#   combo -- SR with radix16
 #
 
-def fft16_a1(xl):
+def fft16_a2(xl):
     global mul_count
     for i in range(4):
         xl[i:16:4] = fft(xl[i:16:4])
@@ -79,10 +82,10 @@ def fft16_a1(xl):
     return xl
 
 
-def fft256_half(xl):
+def fft256_half_a2(xl):
     global mul_count
     for i in range(8):
-        xl[i:128:8] = fft16_a1(xl[i:128:8])
+        xl[i:128:8] = fft16_a2(xl[i:128:8])
 
     wl = array([[exp(-2j*pi*(2*i+1)*j/256) for i in range(8)] for j in range(16)])
     xl = xl * wl.flatten()
@@ -124,60 +127,176 @@ def fft256_a2(xl):
     global mul_count
     n = 256
     t0 = fft(xl[0:n:2])
-    mul_count += 1000
-    t1 = fft256_half(xl[1:n:2])
+    mul_count += 1032#1000
+    t1 = fft256_half_a2(xl[1:n:2])
     return hstack((t0 + t1, t0 - t1))
 
 
 #
 #       Algorithm 3
+#   combo SR with radix16 and carry
+#
+
+def fft16_a3(xl):
+    global mul_count
+    for i in range(4):
+        xl[i:16:4] = fft(xl[i:16:4])
+
+    wl = array([[exp(-2j * pi * i * j / 16)/even_koef(j) for i in range(4)] for j in range(4)])
+    xl = xl * wl.flatten()
+    mul_count += flops4Muls(wl)
+
+    for i in range(4):
+        xl[i*4:i*4+4] = fft(xl[i*4:i*4+4])
+
+    xl = xl.reshape((4, 4)).transpose().flatten()
+    return xl
+
+
+def fft256_half_a3(xl):
+    global mul_count
+    for i in range(8):
+        xl[i:128:8] = fft16_a3(xl[i:128:8])
+
+    curry_up = zeros(16)+1
+    curry_up[1:16:2] = cos(pi/8)
+    curry_down = zeros(16) + 1
+    curry_down[1:16] = cos(pi / 8)
+    wl = array([[exp(-2j*pi*(2*i+1)*j/256)*curry_up[j]*curry_down[j] for i in range(8)] for j in range(16)])
+    xl = xl * wl.flatten()
+    mul_count += flops4Muls(wl)
+
+    for i in range(16):
+        tmp = xl[i*8:(i+1)*8 ]
+        tmp[0:8:2] = fft(tmp[0:8:2])
+        tmp[1:8:2] = fft(tmp[1:8:2])
+        wl = array([[exp(-2j*pi*(2*k+1)*j/16) for k in range(2)] for j in range(4)])
+        if i != 0:
+            wl /= cos(pi/8)
+        tmp = tmp * wl.flatten()
+        mul_count += flops4Muls(wl)
+        for j in range(4):
+            t1 = tmp[2*j]
+            t2 = tmp[2*j+1]
+            tmp[2*j] = t1 + t2
+            tmp[2*j+1] = -1j*(t1 - t2)
+        xl[i*8:(i+1)*8] = tmp
+
+    xl = xl.reshape((8, 16)).transpose().flatten()
+    xl = xl.reshape((2, 64)).transpose().flatten()
+
+    # temp solution
+    xtmp = zeros(128, dtype=complex)
+    xtmp[0:16] = xl[0:16]
+    xtmp[16:32] = xl[32:48]
+    xtmp[32:48] = xl[64:80]
+    xtmp[48:64] = xl[96:112]
+
+    xtmp[64:80] = xl[16:32]
+    xtmp[80:96] = xl[48:64]
+    xtmp[96:112] = xl[80:96]
+    xtmp[112:128] = xl[112:128]
+
+    return xtmp
+
+
+def fft256_a3(xl):
+    global mul_count
+    n = 256
+    t0 = fft(xl[0:n:2])
+    mul_count += 1000
+    t1 = fft256_half_a3(xl[1:n:2])
+    return hstack((t0 + t1, t0 - t1))
+
+
+#
+#       Algorithm 4
+#   radix16 and carry
 #       in progress
 #
+def fft256_a4(x):
+    global mul_count
+    w = array([[exp(-2j*pi*i*j/256) for i in range(16)] for j in range(16)])
+    mul_count += flops4Muls(w)
+
+    for i in range(16):
+        x[i:256:16] = fft16_a4_1(x[i:256:16])
+
+    x *= w.flatten()
+
+    for i in range(16):
+        x[i*16:(i+1)*16] = fft16_a4_2(x[i*16:(i+1)*16])
+
+    return x.reshape((16, 16)).transpose().flatten()
 
 
-# def fft16_m1(xl):
-#     global mul_count
-#     for i in range(4):
-#         xl[i:16:4] = fft(xl[i:16:4])
-#
-#     wl = array([[exp(-2j * pi * i * j / 16) for i in range(4)] for j in range(4)])
-#     xl = xl * wl.flatten()
-#     mul_count += flops4Muls(wl)
-#
-#     for i in range(4):
-#         t0 = xl[i * 4] + xl[i * 4 + 2]
-#         t1 = xl[i * 4] - xl[i * 4 + 2]
-#         t2 = xl[i * 4 + 1] + xl[i * 4 + 3]
-#         t3 = 1j * (xl[i * 4 + 1] - xl[i * 4 + 3])
-#         xl[i * 4] = t0 + t2
-#         xl[i * 4 + 1] = t1 - t3
-#         xl[i * 4 + 2] = t0 - t2
-#         xl[i * 4 + 3] = t1 + t3
-#
-#     xl = xl.reshape((4, 4)).transpose().flatten()
-#     return xl
+def get_w_fft16_r2():
+    w1 = zeros(16, dtype=complex)+1
+    w2 = zeros(16, dtype=complex) + 1
+    w3 = zeros(16, dtype=complex) + 1
+    w1[3:16:4] = -1j
+    for i in range(4):
+        w2[i+4] = wf(i, 8)
+        w2[i+12] = wf(i, 8)
+    for i in range(8):
+        w3[i+8] = wf(i, 16)
+    return w1, w2, w3
 
 
-# def fft256_a2_1(xl):
-#     for i in range(16):
-#         xl[i:256:16] = fft(xl[i:256:16])
-#
-#     global before_x
-#     before_x = xl.copy()
-#
-#     wl = array([[exp(-2j*pi*i*j/256) for i in range(16)] for j in range(16)])
-#     xl = xl * wl.flatten()
-#
-#     global ww
-#     ww = wl.copy()
-#     global after_x
-#     after_x = xl.copy()
-#
-#     for i in range(16):
-#         xl[i * 16:(i + 1) * 16] = fft(xl[i * 16:(i + 1) * 16])
-#
-#     xl = xl.reshape((16, 16)).transpose().flatten()
-#     return xl
+def fft16_a4_1(x):
+    global mul_count
+    tmp = bit_revers(x)
+    w1, w2, w3 = get_w_fft16_r2()
+    mul_count += flops4Muls(w1)
+    mul_count += flops4Muls(w2)
+    mul_count += flops4Muls(w3)
+
+    for i in range(8):
+        tmp[i*2:i*2+2] = fft(tmp[i*2:i*2+2])
+    tmp *= w1
+
+    for i in range(4):
+        for j in range(2):
+            tmp[i*4+j:i*4+j+3:2] = fft(tmp[i*4+j:i*4+j+3:2])
+    tmp *= w2
+
+    for i in range(2):
+        for j in range(4):
+            tmp[i*8+j:i*8+j+5:4] = fft(tmp[i*8+j:i*8+j+5:4])
+    tmp *= w3
+
+    for j in range(8):
+        tmp[j:j+9:8] = fft(tmp[j:j+9:8])
+
+    return tmp
+
+
+def fft16_a4_2(x):
+    global mul_count
+    tmp = x
+    w3, w2, w1 = get_w_fft16_r2()
+    mul_count += flops4Muls(w1)
+    mul_count += flops4Muls(w2)
+    mul_count += flops4Muls(w3)
+
+    for j in range(8):
+        tmp[j:j+9:8] = fft(tmp[j:j+9:8])
+    tmp *= w1
+
+    for i in range(2):
+        for j in range(4):
+            tmp[i*8+j:i*8+j+5:4] = fft(tmp[i*8+j:i*8+j+5:4])
+    tmp *= w2
+
+    for i in range(4):
+        for j in range(2):
+            tmp[i*4+j:i*4+j+3:2] = fft(tmp[i*4+j:i*4+j+3:2])
+    tmp *= w3
+
+    for i in range(8):
+        tmp[i*2:i*2+2] = fft(tmp[i*2:i*2+2])
+
+    return bit_revers(tmp)
 
 #
 #       TEST
@@ -196,32 +315,7 @@ def test_func(func, size, full_list=False):
 
 # test
 mul_count = 0
-test_func(fft256_a2, 256)
+test_func(fft16_a4_1, 16)
 print ("for muls flops = ", mul_count)
 print("flops = ", mul_count+4096)
-
-
-
-
-
-# half test
-# x = array([x for x in range(256)], dtype=complex)
-# w = array([exp(-1j*2*pi*i/256) for i in range(128)])
-# h1 = fft(x[0:256:2])
-# h2 = fft(x[1:256:2])
-# h3 = h2 * w.flatten()
-# # print(max(abs(hstack((h1 + h3, h1 - h3))-fft(x))))
-#
-# after_x = 0
-# before_x = 0
-# ww = 0
-#
-# s2 = ifft(h2)
-# y0 = fft(s2) * w.flatten()
-# y2 = fft256_a2_1(x)
-# y1 = fft256_half(s2)
-# print(y1)
-# print(y0)
-# print(max(abs(y1 - y0)))
-# print(y1-y0)
 
