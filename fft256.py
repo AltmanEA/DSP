@@ -11,7 +11,6 @@ from tools import flops4Muls, bit_revers, wf
 # scaled (s) fft for 64 point
 
 
-
 def fft64s(x, s):
     global mul_count
     for k in range(4):
@@ -19,7 +18,7 @@ def fft64s(x, s):
         for i in range(4):
             z[i:16:4] = fft(z[i:16:4])
         w = array([[exp(-2j*pi*i*j/16)/even_koef(j) for i in range(4)] for j in range(4)])
-        z = z * w.flatten()
+        z *= w.flatten()
         mul_count += flops4Muls(w)
 
         y = zeros(16, dtype=complex)
@@ -28,7 +27,7 @@ def fft64s(x, s):
         x[k:64:4] = y
 
     w = array([[exp(-2j*pi*i*j/64)*even_koef(j)/s[j] for i in range(4)] for j in range(16)])
-    x = x * w.flatten()
+    x *= w.flatten()
     mul_count += flops4Muls(w)
     y = zeros(64, dtype=complex)
     for i in range(16):
@@ -72,7 +71,7 @@ def fft16_a2(xl):
         xl[i:16:4] = fft(xl[i:16:4])
 
     wl = array([[exp(-2j * pi * i * j / 16) for i in range(4)] for j in range(4)])
-    xl = xl * wl.flatten()
+    xl *= wl.flatten()
     mul_count += flops4Muls(wl)
 
     for i in range(4):
@@ -88,7 +87,7 @@ def fft256_half_a2(xl):
         xl[i:128:8] = fft16_a2(xl[i:128:8])
 
     wl = array([[exp(-2j*pi*(2*i+1)*j/256) for i in range(8)] for j in range(16)])
-    xl = xl * wl.flatten()
+    xl *= wl.flatten()
     mul_count += flops4Muls(wl)
 
     for i in range(16):
@@ -143,7 +142,7 @@ def fft16_a3(xl):
         xl[i:16:4] = fft(xl[i:16:4])
 
     wl = array([[exp(-2j * pi * i * j / 16)/even_koef(j) for i in range(4)] for j in range(4)])
-    xl = xl * wl.flatten()
+    xl *= wl.flatten()
     mul_count += flops4Muls(wl)
 
     for i in range(4):
@@ -163,7 +162,7 @@ def fft256_half_a3(xl):
     curry_down = zeros(16) + 1
     curry_down[1:16] = cos(pi / 8)
     wl = array([[exp(-2j*pi*(2*i+1)*j/256)*curry_up[j]*curry_down[j] for i in range(8)] for j in range(16)])
-    xl = xl * wl.flatten()
+    xl *= wl.flatten()
     mul_count += flops4Muls(wl)
 
     for i in range(16):
@@ -173,7 +172,7 @@ def fft256_half_a3(xl):
         wl = array([[exp(-2j*pi*(2*k+1)*j/16) for k in range(2)] for j in range(4)])
         if i != 0:
             wl /= cos(pi/8)
-        tmp = tmp * wl.flatten()
+        tmp *= wl.flatten()
         mul_count += flops4Muls(wl)
         for j in range(4):
             t1 = tmp[2*j]
@@ -302,6 +301,7 @@ def fft16_a4_2(x):
 #       TEST
 #
 
+
 # test function
 def test_func(func, size, full_list=False):
     x = array([x for x in range(size)], dtype=complex)
@@ -310,12 +310,13 @@ def test_func(func, size, full_list=False):
     if full_list:
         print(python_fft)
         print(y)
-    print(max(abs(y-python_fft)))
+    print("error =", max(abs(y-python_fft)))
 
 
 # test
 mul_count = 0
-test_func(fft16_a4_1, 16)
+stages = 8
+test_func(fft256_a1, 2 ** stages)
 print ("for muls flops = ", mul_count)
-print("flops = ", mul_count+4096)
+print("flops = ", mul_count + 2*stages*2**stages)
 
