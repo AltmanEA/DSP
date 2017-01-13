@@ -4,48 +4,40 @@ from numpy.fft import fft
 from tools import bit_reverse_index, wf
 
 
-def model_fft(data, w, permutations):
-    stages, points = w.shape
-    assert w.shape == permutations.shape
-    assert points == data.size
+class ModelFFT:
+    w = zeros((0, 0))
+    permutations = zeros((0, 0))
 
-    result = zeros((stages+1, points), dtype=complex)
-    result[0, :] = data
+    def run(self, data):
+        stages, points = self.permutations.shape
+        assert (stages+1, points) == self.w.shape
+        assert points == data.size
 
-    return result
+        result = zeros((stages+2, points), dtype=complex)
+        result[0, :] = data
 
+        for stage in range(stages):
+            muls = result[stage, :] * self.w[stage, :]
+            butterflys = zeros(muls.shape, dtype=complex)
 
+            for i in range(points // 2):
+                j = i + points // 2
+                butterflys[i] = muls[i] + muls[j]
+                butterflys[j] = muls[i] - muls[j]
 
-def generate_p_matrix(n):
-    stages = int(log2(n))
-    p_matrix = zeros((stages+1, n))
-    for i in range(n):
-        for j in range(stages):
-            p_matrix[j, i] = i
-        p_matrix[stages, i] = bit_reverse_index(i, stages)
-    return p_matrix
+            for i in range(points):
+                result[stage+1, i] = butterflys[self.permutations[stage, i]]
 
+        result[stages+1, :] = result[stages, :] * self.w[stages, :]
 
-def generate_radix2(n):
-    stages = int(log2(n))
-    w_matrix = zeros((stages+1, n), dtype=complex)+1
-    block = 1
-    len = n
-    for s in range(1, stages):
-        ind = 1
-        for i in range(len//2):
-            for j in range(block):
-                w_matrix[s, ind] = wf(i, len)
-                ind += 2
-        len //= 2
-        block *= 2
-    return w_matrix
+        return result
+
+    def generate_permutation(self, stages):
+        points = 2 ** stages
+        result = zeros((stages+1, points))
+        for stage in range(stages):
+            pass
 
 
-n = 16
-print("point -", n)
-w_matrix = generate_radix2(n)
-p_matrix = generate_p_matrix(n)
-x = array([i for i in range(n)], dtype=complex)
-pfft = fft(x)
-y = model_fft(x, w_matrix, p_matrix)
+
+
