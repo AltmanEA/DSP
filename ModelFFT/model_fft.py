@@ -32,6 +32,7 @@ class ModelFFT:
 
         return result
 
+
     def generate_permutation(self, stages):
         points = 2 ** stages
         result = zeros((stages+1, points))
