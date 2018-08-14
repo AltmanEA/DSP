@@ -26,10 +26,10 @@ def real_fft(data):
     for i in range(1, n//2):
         e[i] = (c[i] + c[n//2 - i])/2
         f[i] = (d[i] - d[n//2 - i])/2
-        g[i] = (c[i] - c[n//2 - i])/2
-        h[i] = (d[i] + d[n//2 - i]) / 2
+        h[i] = -(c[i] - c[n//2 - i])/2
+        g[i] = (d[i] + d[n//2 - i]) / 2
         s[i] = e[i] + 1j * f[i]
-        t[i] = h[i] - 1j * g[i]
+        t[i] = g[i] + 1j * h[i]
     w = array([exp(-1j*2*pi*i/n) for i in range(n//2)])
     r = t * w
     for i in range(n//2):
@@ -39,6 +39,6 @@ def real_fft(data):
 
 
 #test
-x = [random() for i in range(64)]
+x = [random() for i in range(128)]
 y = real_fft(x)
 print(max(y-fft(x)))
