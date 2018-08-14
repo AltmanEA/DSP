@@ -1,7 +1,7 @@
 from random import random
 
 from numpy import real, imag
-from numpy.core.umath import pi
+from numpy.core.umath import pi, conj
 from numpy.fft import fft
 from numpy.ma import array, exp, zeros
 
@@ -23,13 +23,17 @@ def real_fft(data):
     t = zeros(n // 2, dtype=complex)
     s[0] = c[0]
     t[0] = d[0]
-    for i in range(1, n//2):
+    s[n//4] = c[n//4]
+    t[n//4] = d[n//4]
+    for i in range(1, n//4):
         e[i] = (c[i] + c[n//2 - i])/2
         f[i] = (d[i] - d[n//2 - i])/2
         h[i] = -(c[i] - c[n//2 - i])/2
         g[i] = (d[i] + d[n//2 - i]) / 2
         s[i] = e[i] + 1j * f[i]
         t[i] = g[i] + 1j * h[i]
+        s[n // 2 - i] = conj(s[i])
+        t[n // 2 - i] = conj(t[i])
     w = array([exp(-1j*2*pi*i/n) for i in range(n//2)])
     r = t * w
     for i in range(n//2):
@@ -39,6 +43,6 @@ def real_fft(data):
 
 
 #test
-x = [random() for i in range(128)]
+x = [random() for i in range(64)]
 y = real_fft(x)
 print(max(y-fft(x)))
